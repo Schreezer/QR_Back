@@ -1,6 +1,9 @@
 # Build stage
 FROM node:20-alpine AS builder
 
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
+
 WORKDIR /app
 
 # Copy package files for backend
@@ -21,6 +24,17 @@ RUN npm run check && \
 # Production stage
 FROM node:20-alpine
 
+# Install Chrome and its dependencies
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    nodejs
+
 WORKDIR /app
 
 # Copy necessary files
@@ -31,8 +45,10 @@ COPY --from=builder /app/package*.json ./
 RUN npm ci --only=production && \
     rm -rf /app/node_modules/.cache
 
-# Set environment variable
+# Set environment variables
 ENV NODE_ENV=production
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # Expose the port your app runs on
 EXPOSE 3000
