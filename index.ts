@@ -1,6 +1,11 @@
-import express, { type Request, Response, NextFunction } from "express";
+import express, { type Request, Response, NextFunction, type Express } from "express";
+import { type Server } from "http";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+
+// Initialize with no-op functions that will be replaced
+let setupVite: (app: Express, server: Server) => Promise<void> = async () => {};
+let serveStatic: (app: Express) => void = () => {};
+let log: (message: string, source?: string) => void = () => {};
 
 const app = express();
 app.use(express.json());
@@ -36,7 +41,23 @@ app.use((req, res, next) => {
   next();
 });
 
+// Dynamic imports based on environment
+async function loadViteModule() {
+  if (process.env.NODE_ENV === "production") {
+    const prod = await import("./vite.prod");
+    setupVite = prod.setupVite;
+    serveStatic = prod.serveStatic;
+    log = prod.log;
+  } else {
+    const dev = await import("./vite");
+    setupVite = dev.setupVite;
+    serveStatic = dev.serveStatic;
+    log = dev.log;
+  }
+}
+
 (async () => {
+  await loadViteModule();
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
