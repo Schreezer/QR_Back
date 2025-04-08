@@ -38,4 +38,4 @@ ENV NODE_ENV=production
 EXPOSE 3000
 
 # Start the application in production mode
-CMD ["node", "--env-file=.env", "dist/index.js"]
+CMD ["node", "dist/index.js"]
